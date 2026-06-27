@@ -1,0 +1,5 @@
+# MCP server
+mcp>=1.28.0
+
+# LED daemon (pyserial for COM port access)
+pyserial>=3.5

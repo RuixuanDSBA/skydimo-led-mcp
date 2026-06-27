@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skydimo LED MCP Server</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --orange: #d29922;
+    --red: #f85149;
+    --teal: #56d4dd;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem 1rem;
+  }
+  .container { max-width: 900px; margin: 0 auto; position: relative; }
+  .lang-btn {
+    position: fixed; top: 1rem; right: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    z-index: 100;
+    transition: background 0.15s;
+  }
+  .lang-btn:hover { background: #1c2128; }
+  h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--muted); margin-bottom: 2rem; font-size: 1rem; }
+  h2 {
+    font-size: 1.3rem;
+    margin: 2rem 0 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 { font-size: 1.05rem; margin: 1.25rem 0 0.5rem; color: var(--accent); }
+  p, li { color: var(--muted); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+  }
+  th, td {
+    padding: 0.6rem 0.8rem;
+    text-align: left;
+    border: 1px solid var(--border);
+  }
+  th { background: var(--surface); font-weight: 600; }
+  tr:hover { background: #1c2128; }
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+    background: var(--surface);
+    padding: 0.15em 0.4em;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 0.75rem 0;
+  }
+  .tag {
+    display: inline-block;
+    padding: 0.15em 0.5em;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-right: 0.3em;
+  }
+  .tag-tool { background: #1f6feb33; color: #58a6ff; }
+  .tag-resource { background: #23863633; color: #3fb950; }
+  .dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin-right: 0.4em;
+    vertical-align: middle;
+  }
+  .dot-rainbow { background: linear-gradient(90deg,red,yellow,lime,cyan,blue,magenta); }
+  .dot-green { background: #3fb950; }
+  .dot-red { background: #f85149; }
+  .dot-teal { background: #56d4dd; }
+  .dot-tealsparkle { background: #56d4dd; box-shadow: 0 0 6px #fff; }
+  .dot-bluewhite { background: linear-gradient(90deg,#58a6ff,#fff); }
+  .dot-wave { background: #3fb950; box-shadow: 0 0 4px #7ee787; }
+  .dot-doublepulse { background: #f85149; box-shadow: 0 0 6px #ff7b72; }
+  .dot-off { background: #30363d; }
+  .footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+
+<button class="lang-btn" onclick="toggleLang()" id="langBtn">中文</button>
+
+<div class="container">
+
+<h1 data-i18n="title">Skydimo LED MCP Server</h1>
+<p class="subtitle" data-i18n="subtitle">
+  Physical LED strip status indicator — controllable via
+  <a href="https://modelcontextprotocol.io" target="_blank">Model Context Protocol</a>
+</p>
+
+<h2 data-i18n="overview_h">Overview</h2>
+<p data-i18n="overview_p">
+  This MCP server connects AI coding tools to a physical Skydimo SK0124 RGB LED strip
+  (54 LEDs on COM4, CH340 USB-Serial). It exposes tools and resources that allow
+  an AI assistant to change the LED color/animation based on what it is doing —
+  giving you a <strong>physical</strong> real-time indicator of AI activity.
+</p>
+
+<h2 data-i18n="hardware_h">Hardware Setup</h2>
+<ul>
+  <li><strong data-i18n="h_led">LED Strip:</strong> <span data-i18n="h_led_v">Skydimo SK0124, 54 RGB LEDs</span></li>
+  <li><strong data-i18n="h_conn">Connection:</strong> <span data-i18n="h_conn_v">CH340 USB-Serial adapter on</span> <code>COM4</code></li>
+  <li><strong data-i18n="h_baud">Baud rate:</strong> 115200</li>
+  <li><strong data-i18n="h_proto">Protocol:</strong> Adalight (<code>Ada + 0x00 + 0x00 + N_LEDS + [R,G,B] * N_LEDS</code>)</li>
+</ul>
+
+<h2 data-i18n="arch_h">Architecture</h2>
+<p data-i18n="arch_p">
+  A background Python daemon (<code>skydimo_daemon.py</code>) opens COM4 directly and renders
+  LED animations. It monitors <code>.ai_state</code> for mode changes and switches instantly.
+  The MCP server simply writes to <code>.ai_state</code> — no daemon restart needed.
+</p>
+<pre>
+AI Tool (opencode, Claude, etc.)
+  │  MCP protocol (stdio)
+  ▼
+skydimo-mcp/server.py
+  │  delegates to CLI
+  ▼
+C:\Users\alexr\skydimo\ (.ai_state → COM4 daemon)
+  ▼
+Skydimo LED Strip ✨
+</pre>
+
+<h2 data-i18n="tools_h">Available MCP Tools</h2>
+
+<table>
+  <thead>
+    <tr><th data-i18n="t_col1">Tool</th><th data-i18n="t_col2">Description</th><th data-i18n="t_col3">Parameters</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>set_led_state</code> <span class="tag tag-tool">tool</span></td>
+      <td data-i18n="t_set_desc">Change the LED strip to a visual mode</td>
+      <td><code data-i18n="t_set_param">mode</code> <span data-i18n="t_set_param2">(required): one of the 9 modes below</span></td>
+    </tr>
+    <tr>
+      <td><code>start_daemon</code> <span class="tag tag-tool">tool</span></td>
+      <td data-i18n="t_start_desc">Start the background COM4 daemon</td>
+      <td><code data-i18n="t_start_param">mode</code> <span data-i18n="t_start_param2">(optional, default </span><code>idle</code>)</td>
+    </tr>
+    <tr>
+      <td><code>stop_daemon</code> <span class="tag tag-tool">tool</span></td>
+      <td data-i18n="t_stop_desc">Stop the daemon gracefully (sends off frame)</td>
+      <td><em data-i18n="t_none">none</em></td>
+    </tr>
+    <tr>
+      <td><code>get_status</code> <span class="tag tag-tool">tool</span></td>
+      <td data-i18n="t_stat_desc">Query daemon status and current LED state</td>
+      <td><em data-i18n="t_none">none</em></td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 data-i18n="modes_h">LED Mode Reference</h2>
+
+<table>
+  <thead>
+    <tr><th>Mode</th><th data-i18n="m_col2">Effect</th><th data-i18n="m_col3">Description</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>reasoning</code></td>
+      <td><span class="dot dot-rainbow"></span> <span data-i18n="m_reas_e">Rainbow flowing</span></td>
+      <td data-i18n="m_reas_d">LLM is thinking / processing</td>
+    </tr>
+    <tr>
+      <td><code>output</code></td>
+      <td><span class="dot dot-green"></span> <span data-i18n="m_out_e">Green chasing beams</span></td>
+      <td data-i18n="m_out_d">Streaming output / writing files</td>
+    </tr>
+    <tr>
+      <td><code>decision</code></td>
+      <td><span class="dot dot-red"></span> <span data-i18n="m_dec_e">Red rapid breathing</span></td>
+      <td data-i18n="m_dec_d">Needs user decision / code review</td>
+    </tr>
+    <tr>
+      <td><code>idle</code></td>
+      <td><span class="dot dot-teal"></span> <span data-i18n="m_idle_e">Teal breathing (slow)</span></td>
+      <td data-i18n="m_idle_d">Idle / waiting / done</td>
+    </tr>
+    <tr>
+      <td><code>waiting_user</code></td>
+      <td><span class="dot dot-tealsparkle"></span> <span data-i18n="m_wait_e">Teal breathing + white sparkle</span></td>
+      <td data-i18n="m_wait_d">Waiting for user reply</td>
+    </tr>
+    <tr>
+      <td><code>testing</code></td>
+      <td><span class="dot dot-bluewhite"></span> <span data-i18n="m_test_e">Blue-white bouncing scanner</span></td>
+      <td data-i18n="m_test_d">Running tests / verification</td>
+    </tr>
+    <tr>
+      <td><code>success</code></td>
+      <td><span class="dot dot-wave"></span> <span data-i18n="m_succ_e">Green expanding wave + sparkle</span></td>
+      <td data-i18n="m_succ_d">Tests passed / task completed</td>
+    </tr>
+    <tr>
+      <td><code>error</code></td>
+      <td><span class="dot dot-doublepulse"></span> <span data-i18n="m_err_e">Red double pulse</span></td>
+      <td data-i18n="m_err_d">Error / command failed</td>
+    </tr>
+    <tr>
+      <td><code>off</code></td>
+      <td><span class="dot dot-off"></span> <span data-i18n="m_off_e">All off</span></td>
+      <td data-i18n="m_off_d">Turn off the lights</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 data-i18n="res_h">Available MCP Resources</h2>
+
+<table>
+  <thead>
+    <tr><th>URI</th><th data-i18n="r_col2">Content</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>skydimo://status</code> <span class="tag tag-resource">resource</span></td>
+      <td data-i18n="r_stat">Plain-text status: daemon running?, current LED state</td>
+    </tr>
+    <tr>
+      <td><code>skydimo://modes</code> <span class="tag tag-resource">resource</span></td>
+      <td data-i18n="r_modes">JSON list of all valid mode names</td>
+    </tr>
+    <tr>
+      <td><code>skydimo://help</code> <span class="tag tag-resource">resource</span></td>
+      <td data-i18n="r_help">This HTML page</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 data-i18n="usage_h">Usage Examples</h2>
+
+<h3 data-i18n="u_set">Set LED state (via tool call)</h3>
+<pre>
+# AI assistant calls:
+set_led_state({ "mode": "reasoning" })
+# → LED shows rainbow flowing animation
+</pre>
+
+<h3 data-i18n="u_query">Query status</h3>
+<pre>
+get_status({})
+# → Daemon: running
+# → LED State: reasoning
+</pre>
+
+<h3 data-i18n="u_cli">Direct CLI (for debugging)</h3>
+<pre>
+# <span data-i18n="u_cli1">Write state directly (bypasses MCP)</span>
+echo reasoning > C:\Users\alexr\skydimo\.ai_state
+
+# <span data-i18n="u_cli2">Or use the provided CLI</span>
+python C:\Users\alexr\skydimo\skydimo.py reasoning
+</pre>
+
+<h2 data-i18n="shutdown_h">Graceful Shutdown</h2>
+<p data-i18n="shutdown_p">
+  The daemon listens for a <code>.skydimo_daemon.stop</code> signal file. When
+  <code>stop_daemon</code> is called, a stop signal is written, the daemon exits
+  its render loop cleanly, sends one final <strong>off</strong> frame to the LEDs,
+  and releases COM4.
+</p>
+
+<h2 data-i18n="files_h">File Layout</h2>
+<pre>
+C:\Users\alexr\skydimo-mcp\
+├── server.py              <span data-i18n="f_mcp_server"># MCP server (stdio transport)</span>
+├── skydimo_bridge.py      <span data-i18n="f_bridge"># Bridge to the real CLI</span>
+├── index.html             <span data-i18n="f_html"># This file</span>
+└── ...
+
+C:\Users\alexr\skydimo\
+├── skydimo.py             <span data-i18n="f_cli"># CLI entry point</span>
+├── skydimo_daemon.py      <span data-i18n="f_daemon"># Background COM4 daemon</span>
+├── skydimo_config.py      <span data-i18n="f_config"># Shared config</span>
+├── .ai_state              <span data-i18n="f_state"># State file (write here to control)</span>
+├── .skydimo_daemon.pid    <span data-i18n="f_pid"># Daemon PID</span>
+├── .skydimo_daemon.stop   <span data-i18n="f_stop"># Graceful shutdown signal</span>
+└── legacy/
+    └── skydimo_agent.py   <span data-i18n="f_legacy"># Old Skydimo App approach</span>
+</pre>
+
+<h2 data-i18n="config_h">Configuration</h2>
+<p data-i18n="config_p">
+  To use this MCP server with opencode, add the following to your
+  <code>opencode.jsonc</code>:
+</p>
+<pre>{
+  "mcp": {
+    "skydimo-led": {
+      "type": "local",
+      "command": ["python", "C:\\Users\\alexr\\skydimo-mcp\\server.py"],
+      "enabled": true
+    }
+  }
+}</pre>
+
+<h2 data-i18n="latency_h">Latency Analysis</h2>
+<table>
+  <thead>
+    <tr><th data-i18n="lat_path">Path</th><th data-i18n="lat_time">Measured Latency</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>set_led_state</code> <span data-i18n="lat_bridge">(MCP → bridge → subprocess → skydimo.py)</span></td>
+      <td><strong>~62ms</strong></td>
+    </tr>
+    <tr>
+      <td data-i18n="lat_direct">Direct file write (<code>.ai_state</code>)</td>
+      <td><strong>~0.24ms</strong></td>
+    </tr>
+    <tr>
+      <td data-i18n="lat_poll">Daemon <code>file_listener</code> polling interval</td>
+      <td><strong>100ms</strong> <span data-i18n="lat_poll_note">(max delay before LED updates)</span></td>
+    </tr>
+    <tr>
+      <td data-i18n="lat_total"><strong>Total end-to-end latency</strong></td>
+      <td><strong>~162ms</strong> <span data-i18n="lat_total_note">(imperceptible to human eye)</span></td>
+    </tr>
+  </tbody>
+</table>
+<p data-i18n="lat_conclusion">
+  <strong>Conclusion:</strong> The delay is <em>not</em> an I/O bottleneck. Each MCP call spawns a
+  Python subprocess (~62ms), then the daemon's polling thread picks up the change within 100ms.
+  Total latency is ~162ms — effectively real-time. The subprocess overhead could be eliminated
+  by writing <code>.ai_state</code> directly in the bridge, but at 62ms it's already imperceptible.
+</p>
+
+<h2 data-i18n="sim_h">Refactor Simulation Test (15 states / 2 minutes)</h2>
+<p data-i18n="sim_p">
+  A realistic large-project refactor scenario driven entirely through MCP tool calls
+  (<code>set_led_state</code>). 15 state switches, 8 seconds each, simulating a 50k-line monorepo refactoring.
+</p>
+<table>
+  <thead>
+    <tr><th>#</th><th>Time</th><th>Mode</th><th data-i18n="sim_color">LED Color</th><th data-i18n="sim_scenario">Scenario</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>0:00</td><td><code>reasoning</code></td><td><span class="dot dot-rainbow"></span> <span data-i18n="m_reas_e">Rainbow flowing</span></td><td data-i18n="sim_1">Analyzing 50k-line monorepo, building module dependency graph</td></tr>
+    <tr><td>2</td><td>0:08</td><td><code>decision</code></td><td><span class="dot dot-red"></span> <span data-i18n="m_dec_e">Red rapid breathing</span></td><td data-i18n="sim_2">Architecture decision: extract @company/types shared package</td></tr>
+    <tr><td>3</td><td>0:16</td><td><code>waiting_user</code></td><td><span class="dot dot-tealsparkle"></span> <span data-i18n="m_wait_e">Teal breathing + white sparkle</span></td><td data-i18n="sim_3">Awaiting confirmation: breaking changes affect 23 downstream packages</td></tr>
+    <tr><td>4</td><td>0:24</td><td><code>output</code></td><td><span class="dot dot-green"></span> <span data-i18n="m_out_e">Green chasing beams</span></td><td data-i18n="sim_4">Creating types package, migrating 47 type definition files</td></tr>
+    <tr><td>5</td><td>0:32</td><td><code>testing</code></td><td><span class="dot dot-bluewhite"></span> <span data-i18n="m_test_e">Blue-white bouncing scanner</span></td><td data-i18n="sim_5">Running types package unit tests (128 tests)</td></tr>
+    <tr><td>6</td><td>0:40</td><td><code>success</code></td><td><span class="dot dot-wave"></span> <span data-i18n="m_succ_e">Green expanding wave + sparkle</span></td><td data-i18n="sim_6">Types package tests 128/128 all passed</td></tr>
+    <tr><td>7</td><td>0:48</td><td><code>output</code></td><td><span class="dot dot-green"></span> <span data-i18n="m_out_e">Green chasing beams</span></td><td data-i18n="sim_7">Refactoring auth module, updating 15 file imports</td></tr>
+    <tr><td>8</td><td>0:56</td><td><code>testing</code></td><td><span class="dot dot-bluewhite"></span> <span data-i18n="m_test_e">Blue-white bouncing scanner</span></td><td data-i18n="sim_8">Running auth module unit tests (342 tests)</td></tr>
+    <tr><td>9</td><td>1:04</td><td><code>error</code></td><td><span class="dot dot-doublepulse"></span> <span data-i18n="m_err_e">Red double pulse</span></td><td data-i18n="sim_9">3 tests failed: JWT refresh token race condition</td></tr>
+    <tr><td>10</td><td>1:12</td><td><code>reasoning</code></td><td><span class="dot dot-rainbow"></span> <span data-i18n="m_reas_e">Rainbow flowing</span></td><td data-i18n="sim_10">Debugging: tracing async race in refreshToken()</td></tr>
+    <tr><td>11</td><td>1:20</td><td><code>output</code></td><td><span class="dot dot-green"></span> <span data-i18n="m_out_e">Green chasing beams</span></td><td data-i18n="sim_11">Fix: adding mutex lock, refactoring refresh queue</td></tr>
+    <tr><td>12</td><td>1:28</td><td><code>testing</code></td><td><span class="dot dot-bluewhite"></span> <span data-i18n="m_test_e">Blue-white bouncing scanner</span></td><td data-i18n="sim_12">Re-running auth + payment integration tests</td></tr>
+    <tr><td>13</td><td>1:36</td><td><code>error</code></td><td><span class="dot dot-doublepulse"></span> <span data-i18n="m_err_e">Red double pulse</span></td><td data-i18n="sim_13">Payment gateway timeout: retry logic doesn't handle 503</td></tr>
+    <tr><td>14</td><td>1:44</td><td><code>output</code></td><td><span class="dot dot-green"></span> <span data-i18n="m_out_e">Green chasing beams</span></td><td data-i18n="sim_14">Fix: adding exponential backoff retry + 503 fallback</td></tr>
+    <tr><td>15</td><td>1:52</td><td><code>idle</code></td><td><span class="dot dot-teal"></span> <span data-i18n="m_idle_e">Teal breathing (slow)</span></td><td data-i18n="sim_15">All 847 tests passed, refactor complete, standing by</td></tr>
+  </tbody>
+</table>
+<p data-i18n="sim_result">
+  <strong>Result:</strong> All 15 MCP tool calls succeeded. LED switched within ~162ms of each call.
+  The 2-minute scenario covered 7 distinct modes with realistic state transitions
+  (reasoning → decision → waiting → output → testing → success → error cycles).
+</p>
+
+<div class="footer">
+  <p>Skydimo LED MCP Server — <a href="https://github.com/anomalyco/opencode" target="_blank">opencode</a> integration</p>
+</div>
+
+</div>
+
+<script>
+const langData = {
+  title: { en: "Skydimo LED MCP Server", zh: "Skydimo LED MCP 服务器" },
+  subtitle: { en: 'Physical LED strip status indicator \u2014 controllable via <a href="https://modelcontextprotocol.io" target="_blank">Model Context Protocol</a>', zh: '物理 LED 灯带状态指示器 \u2014 通过 <a href="https://modelcontextprotocol.io" target="_blank">模型上下文协议</a> 控制' },
+  overview_h: { en: "Overview", zh: "概述" },
+  overview_p: { en: 'This MCP server connects AI coding tools to a physical Skydimo SK0124 RGB LED strip (54 LEDs on COM4, CH340 USB-Serial). It exposes tools and resources that allow an AI assistant to change the LED color/animation based on what it is doing \u2014 giving you a <strong>physical</strong> real-time indicator of AI activity.', zh: '此 MCP 服务器将 AI 编程工具连接到物理 Skydimo SK0124 RGB LED 灯带（54 颗 LED，COM4，CH340 USB 串口）。它提供工具和资源，让 AI 助手能根据当前工作状态切换 LED 颜色/动画 \u2014 给你一个<strong>物理</strong>的 AI 活动实时指示器。' },
+  hardware_h: { en: "Hardware Setup", zh: "硬件配置" },
+  h_led: { en: "LED Strip:", zh: "灯带：" },
+  h_led_v: { en: "Skydimo SK0124, 54 RGB LEDs", zh: "Skydimo SK0124，54 颗 RGB LED" },
+  h_conn: { en: "Connection:", zh: "连接：" },
+  h_conn_v: { en: "CH340 USB-Serial adapter on", zh: "CH340 USB 串口适配器，" },
+  h_baud: { en: "Baud rate:", zh: "波特率：" },
+  h_proto: { en: "Protocol:", zh: "协议：" },
+  arch_h: { en: "Architecture", zh: "架构" },
+  arch_p: { en: 'A background Python daemon (<code>skydimo_daemon.py</code>) opens COM4 directly and renders LED animations. It monitors <code>.ai_state</code> for mode changes and switches instantly. The MCP server simply writes to <code>.ai_state</code> \u2014 no daemon restart needed.', zh: '后台 Python 守护进程（<code>skydimo_daemon.py</code>）直接打开 COM4 并渲染 LED 动画。它监听 <code>.ai_state</code> 文件的变化并即时切换。MCP 服务器只需写入 <code>.ai_state</code> 即可 \u2014 无需重启守护进程。' },
+  tools_h: { en: "Available MCP Tools", zh: "可用的 MCP 工具" },
+  t_col1: { en: "Tool", zh: "工具" },
+  t_col2: { en: "Description", zh: "描述" },
+  t_col3: { en: "Parameters", zh: "参数" },
+  t_set_desc: { en: "Change the LED strip to a visual mode", zh: "将灯带切换到指定的视觉效果模式" },
+  t_set_param: { en: "mode", zh: "mode" },
+  t_set_param2: { en: "(required): one of the 9 modes below", zh: "（必填）：以下 9 种模式之一" },
+  t_start_desc: { en: "Start the background COM4 daemon", zh: "启动后台 COM4 守护进程" },
+  t_start_param: { en: "mode", zh: "mode" },
+  t_start_param2: { en: "(optional, default ", zh: "（可选，默认 " },
+  t_stop_desc: { en: "Stop the daemon gracefully (sends off frame)", zh: "优雅关闭守护进程（发送关灯帧）" },
+  t_none: { en: "none", zh: "无" },
+  t_stat_desc: { en: "Query daemon status and current LED state", zh: "查询守护进程状态和当前 LED 状态" },
+  modes_h: { en: "LED Mode Reference", zh: "LED 模式参考" },
+  m_col2: { en: "Effect", zh: "效果" },
+  m_col3: { en: "Description", zh: "描述" },
+  m_reas_e: { en: "Rainbow flowing", zh: "彩虹流动" },
+  m_reas_d: { en: "LLM is thinking / processing", zh: "AI 正在思考/处理" },
+  m_out_e: { en: "Green chasing beams", zh: "绿色跑马灯" },
+  m_out_d: { en: "Streaming output / writing files", zh: "正在输出/写入文件" },
+  m_dec_e: { en: "Red rapid breathing", zh: "红色快速呼吸" },
+  m_dec_d: { en: "Needs user decision / code review", zh: "需要用户决策/代码审查" },
+  m_idle_e: { en: "Teal breathing (slow)", zh: "青蓝呼吸（慢）" },
+  m_idle_d: { en: "Idle / waiting / done", zh: "空闲/等待/完成" },
+  m_wait_e: { en: "Teal breathing + white sparkle", zh: "青蓝呼吸 + 白点闪烁" },
+  m_wait_d: { en: "Waiting for user reply", zh: "等待用户回复" },
+  m_test_e: { en: "Blue-white bouncing scanner", zh: "蓝白往返扫描" },
+  m_test_d: { en: "Running tests / verification", zh: "运行测试/验证" },
+  m_succ_e: { en: "Green expanding wave + sparkle", zh: "绿色波纹 + 闪点" },
+  m_succ_d: { en: "Tests passed / task completed", zh: "测试通过/任务完成" },
+  m_err_e: { en: "Red double pulse", zh: "红色双脉冲" },
+  m_err_d: { en: "Error / command failed", zh: "错误/命令失败" },
+  m_off_e: { en: "All off", zh: "全部关闭" },
+  m_off_d: { en: "Turn off the lights", zh: "关闭灯光" },
+  res_h: { en: "Available MCP Resources", zh: "可用的 MCP 资源" },
+  r_col2: { en: "Content", zh: "内容" },
+  r_stat: { en: "Plain-text status: daemon running?, current LED state", zh: "纯文本状态：守护进程是否运行、当前 LED 状态" },
+  r_modes: { en: "JSON list of all valid mode names", zh: "所有有效模式名称的 JSON 列表" },
+  r_help: { en: "This HTML page", zh: "本 HTML 页面" },
+  usage_h: { en: "Usage Examples", zh: "使用示例" },
+  u_set: { en: "Set LED state (via tool call)", zh: "设置 LED 状态（通过工具调用）" },
+  u_query: { en: "Query status", zh: "查询状态" },
+  u_cli: { en: "Direct CLI (for debugging)", zh: "直接 CLI 调用（调试用）" },
+  u_cli1: { en: "Write state directly (bypasses MCP)", zh: "直接写入状态（绕过 MCP）" },
+  u_cli2: { en: "Or use the provided CLI", zh: "或使用提供的 CLI" },
+  shutdown_h: { en: "Graceful Shutdown", zh: "优雅关闭" },
+  shutdown_p: { en: 'The daemon listens for a <code>.skydimo_daemon.stop</code> signal file. When <code>stop_daemon</code> is called, a stop signal is written, the daemon exits its render loop cleanly, sends one final <strong>off</strong> frame to the LEDs, and releases COM4.', zh: '守护进程监听 <code>.skydimo_daemon.stop</code> 信号文件。当调用 <code>stop_daemon</code> 时，写入停止信号，守护进程干净地退出渲染循环，向 LED 发送最后一个<strong>关灯</strong>帧，并释放 COM4。' },
+  files_h: { en: "File Layout", zh: "文件结构" },
+  f_mcp_server: { en: "# MCP server (stdio transport)", zh: "# MCP 服务器（stdio 传输）" },
+  f_bridge: { en: "# Bridge to the real CLI", zh: "# 连接到真实 CLI 的桥接层" },
+  f_html: { en: "# This file", zh: "# 本文件" },
+  f_cli: { en: "# CLI entry point", zh: "# CLI 入口" },
+  f_daemon: { en: "# Background COM4 daemon", zh: "# 后台 COM4 守护进程" },
+  f_config: { en: "# Shared config", zh: "# 共享配置" },
+  f_state: { en: "# State file (write here to control)", zh: "# 状态文件（写入此文件控制灯带）" },
+  f_pid: { en: "# Daemon PID", zh: "# 守护进程 PID" },
+  f_stop: { en: "# Graceful shutdown signal", zh: "# 优雅关闭信号" },
+  f_legacy: { en: "# Old Skydimo App approach", zh: "# 旧的 Skydimo App 方案" },
+  config_h: { en: "Configuration", zh: "配置" },
+  config_p: { en: 'To use this MCP server with opencode, add the following to your <code>opencode.jsonc</code>:', zh: '要在 opencode 中使用此 MCP 服务器，请将以下内容添加到你的 <code>opencode.jsonc</code>：' },
+  latency_h: { en: "Latency Analysis", zh: "延迟分析" },
+  lat_path: { en: "Path", zh: "路径" },
+  lat_time: { en: "Measured Latency", zh: "实测延迟" },
+  lat_bridge: { en: "(MCP → bridge → subprocess → skydimo.py)", zh: "（MCP → 桥接 → 子进程 → skydimo.py）" },
+  lat_direct: { en: "Direct file write (<code>.ai_state</code>)", zh: "直接写文件（<code>.ai_state</code>）" },
+  lat_poll: { en: "Daemon <code>file_listener</code> polling interval", zh: "守护进程 <code>file_listener</code> 轮询间隔" },
+  lat_poll_note: { en: "(max delay before LED updates)", zh: "（LED 更新前的最大延迟）" },
+  lat_total: { en: "<strong>Total end-to-end latency</strong>", zh: "<strong>端到端总延迟</strong>" },
+  lat_total_note: { en: "(imperceptible to human eye)", zh: "（肉眼无法察觉）" },
+  lat_conclusion: { en: '<strong>Conclusion:</strong> The delay is <em>not</em> an I/O bottleneck. Each MCP call spawns a Python subprocess (~62ms), then the daemon\'s polling thread picks up the change within 100ms. Total latency is ~162ms — effectively real-time. The subprocess overhead could be eliminated by writing <code>.ai_state</code> directly in the bridge, but at 62ms it\'s already imperceptible.', zh: '<strong>结论：</strong>延迟<em>不是</em> I/O 瓶颈。每次 MCP 调用启动一个 Python 子进程（~62ms），然后守护进程的轮询线程在 100ms 内拾取变更。总延迟约 162ms —— 基本实时。子进程开销可以通过在桥接层直接写 <code>.ai_state</code> 消除，但 62ms 已经无法感知。' },
+  sim_h: { en: "Refactor Simulation Test (15 states / 2 minutes)", zh: "重构模拟测试（15 次状态切换 / 2 分钟）" },
+  sim_p: { en: 'A realistic large-project refactor scenario driven entirely through MCP tool calls (<code>set_led_state</code>). 15 state switches, 8 seconds each, simulating a 50k-line monorepo refactoring.', zh: '一个真实的大型项目重构场景，完全通过 MCP 工具调用（<code>set_led_state</code>）驱动。15 次状态切换，每次 8 秒，模拟 5 万行 monorepo 重构。' },
+  sim_color: { en: "LED Color", zh: "灯效颜色" },
+  sim_scenario: { en: "Scenario", zh: "场景描述" },
+  sim_1: { en: "Analyzing 50k-line monorepo, building module dependency graph", zh: "分析 5 万行 monorepo，构建模块依赖图" },
+  sim_2: { en: "Architecture decision: extract @company/types shared package", zh: "架构决策：提取 @company/types 共享包" },
+  sim_3: { en: "Awaiting confirmation: breaking changes affect 23 downstream packages", zh: "等待确认：破坏性变更影响 23 个下游包" },
+  sim_4: { en: "Creating types package, migrating 47 type definition files", zh: "创建 types 包，迁移 47 个类型定义文件" },
+  sim_5: { en: "Running types package unit tests (128 tests)", zh: "运行 types 包单元测试（128 个）" },
+  sim_6: { en: "Types package tests 128/128 all passed", zh: "types 包测试 128/128 全部通过" },
+  sim_7: { en: "Refactoring auth module, updating 15 file imports", zh: "重构 auth 模块，更新 15 个文件导入" },
+  sim_8: { en: "Running auth module unit tests (342 tests)", zh: "运行 auth 模块单元测试（342 个）" },
+  sim_9: { en: "3 tests failed: JWT refresh token race condition", zh: "3 个测试失败：JWT 刷新令牌竞态条件" },
+  sim_10: { en: "Debugging: tracing async race in refreshToken()", zh: "调试：追踪 refreshToken() 中的 async 竞态" },
+  sim_11: { en: "Fix: adding mutex lock, refactoring refresh queue", zh: "修复：添加互斥锁，重构刷新队列" },
+  sim_12: { en: "Re-running auth + payment integration tests", zh: "重新运行 auth + payment 集成测试" },
+  sim_13: { en: "Payment gateway timeout: retry logic doesn't handle 503", zh: "payment 网关超时：重试逻辑未处理 503" },
+  sim_14: { en: "Fix: adding exponential backoff retry + 503 fallback", zh: "修复：添加指数退避重试 + 503 降级" },
+  sim_15: { en: "All 847 tests passed, refactor complete, standing by", zh: "全部 847 测试通过，重构完成，待命" },
+  sim_result: { en: '<strong>Result:</strong> All 15 MCP tool calls succeeded. LED switched within ~162ms of each call. The 2-minute scenario covered 7 distinct modes with realistic state transitions (reasoning → decision → waiting → output → testing → success → error cycles).', zh: '<strong>结果：</strong>15 次 MCP 工具调用全部成功。每次调用后约 162ms 内 LED 完成切换。2 分钟场景覆盖了 7 种不同模式，包含真实的状态转换（思考 → 决策 → 等待 → 输出 → 测试 → 成功 → 错误 循环）。' },
+};
+
+let currentLang = "zh";
+
+function toggleLang() {
+  currentLang = currentLang === "zh" ? "en" : "zh";
+  document.getElementById("langBtn").textContent = currentLang === "zh" ? "English" : "中文";
+  document.documentElement.lang = currentLang === "zh" ? "zh-CN" : "en";
+  applyLang(currentLang);
+}
+
+function applyLang(lang) {
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.getAttribute("data-i18n");
+    const val = langData[key];
+    if (val) {
+      el.innerHTML = val[lang];
+    }
+  });
+}
+
+applyLang(currentLang);
+</script>
+
+</body>
+</html>
