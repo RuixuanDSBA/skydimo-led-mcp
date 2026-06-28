@@ -2,7 +2,7 @@
 Skydimo LED Controller — manages the direct-COM daemon.
 
 Usage:
-  python skydimo.py <mode>         # Start/switch mode (reasoning/output/decision/idle/waiting_user/testing/success/error/off)
+  python skydimo.py <mode>         # Start/switch mode (reasoning/output/decision/idle/waiting_user/testing/success/error/planning/git_push/git_merge/off)
   python skydimo.py start [mode]   # Start the daemon (default: idle)
   python skydimo.py stop           # Stop the daemon
   python skydimo.py status         # Check daemon status
@@ -23,7 +23,8 @@ def is_running():
             ['powershell', '-noprofile', '-c',
              f'$p = Get-CimInstance Win32_Process -Filter "ProcessId = {pid}"; '
              f'if ($p) {{ $p.CommandLine }}'],
-            capture_output=True, text=True, timeout=5)
+            capture_output=True, text=True, timeout=5,
+            encoding='utf-8', errors='replace')
         if result.returncode != 0 or not result.stdout.strip():
             return False
         return 'skydimo_daemon.py' in result.stdout
@@ -96,7 +97,8 @@ def status():
     s = "stopped"
     try:
         out = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq SkyDimo.exe'],
-                             capture_output=True, text=True).stdout
+                             capture_output=True, text=True,
+                             encoding='utf-8', errors='replace').stdout
         if 'SkyDimo.exe' in out:
             s = "running"
     except Exception:

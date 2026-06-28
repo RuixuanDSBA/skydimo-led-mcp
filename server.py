@@ -33,7 +33,9 @@ async def list_tools() -> ListToolsResult:
                         "Modes: reasoning (rainbow), output (green chase), "
                         "decision (red pulse), idle (teal breathe), "
                         "waiting_user (teal+sparkle), testing (blue-white scan), "
-                        "success (green wave), error (red double-pulse), off.",
+                        "success (green wave), error (red double-pulse), "
+                        "planning (purple breathe), git_push (yellow flash), "
+                        "git_merge (orange pulse), off.",
             inputSchema={
                 "type": "object",
                 "properties": {
