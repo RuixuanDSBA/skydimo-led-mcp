@@ -27,8 +27,10 @@ PID_FILE = os.path.join(SKYDIMO_DIR, ".skydimo_daemon.pid")
 # environments, set SKYDIMO_DAEMON_PY to the interpreter that has pyserial.
 DAEMON_PYTHON = os.environ.get("SKYDIMO_DAEMON_PY", sys.executable)
 
-VALID_MODES = ("reasoning", "output", "decision", "idle", "waiting_user",
-               "testing", "success", "error", "off")
+# Import VALID_MODES from the daemon's config — single source of truth.
+# Adding a new mode only requires editing daemon/skydimo_config.py.
+sys.path.insert(0, SKYDIMO_DIR)
+from skydimo_config import VALID_MODES
 
 
 def _run_cli(*args, python=None):

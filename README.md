@@ -27,7 +27,7 @@ MCP tools/resources              daemon/skydimo_daemon.py
 
 The MCP server exposes tools that an AI assistant can call. Each tool call writes a state name to a file. A background daemon polls that file and switches the LED animation instantly (~162ms total latency).
 
-## 9 LED Modes
+## 12 LED Modes
 
 | Mode | Effect | When to use |
 |------|--------|-------------|
@@ -39,6 +39,9 @@ The MCP server exposes tools that an AI assistant can call. Each tool call write
 | `testing` | Blue-white scanner | Running tests / verification |
 | `success` | Green wave + sparkle | Tests passed / task completed |
 | `error` | Red double pulse | Error / command failed |
+| `planning` | Purple slow breathing | Architecture planning / design |
+| `git_push` | Yellow flashing | Pushing code to remote |
+| `git_merge` | Orange pulsing | Merging branches / resolving conflicts |
 | `off` | All off | Turn off lights |
 
 ## Hardware Requirements
@@ -137,7 +140,7 @@ skydimo-led-mcp/
 
 | Tool | Description | Parameters |
 |------|-------------|------------|
-| `set_led_state` | Switch LED to a visual mode | `mode` (required): one of 9 modes |
+| `set_led_state` | Switch LED to a visual mode | `mode` (required): one of 12 modes |
 | `start_daemon` | Start the background daemon | `mode` (optional, default `idle`) |
 | `stop_daemon` | Stop daemon gracefully (sends off frame) | none |
 | `get_status` | Query daemon status and current LED state | none |

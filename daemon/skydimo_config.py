@@ -24,5 +24,8 @@ VALID_MODES = (
     'testing',
     'success',
     'error',
+    'planning',
+    'git_push',
+    'git_merge',
     'off',
 )

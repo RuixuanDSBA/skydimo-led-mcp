@@ -104,6 +104,9 @@
   .dot-wave { background: #3fb950; box-shadow: 0 0 4px #7ee787; }
   .dot-doublepulse { background: #f85149; box-shadow: 0 0 6px #ff7b72; }
   .dot-off { background: #30363d; }
+  .dot-purple { background: #a371f7; }
+  .dot-yellow { background: #d29922; }
+  .dot-orange { background: #f0883e; }
   .footer {
     margin-top: 3rem;
     padding-top: 1rem;
@@ -169,7 +172,7 @@ Skydimo LED Strip ✨
     <tr>
       <td><code>set_led_state</code> <span class="tag tag-tool">tool</span></td>
       <td data-i18n="t_set_desc">Change the LED strip to a visual mode</td>
-      <td><code data-i18n="t_set_param">mode</code> <span data-i18n="t_set_param2">(required): one of the 9 modes below</span></td>
+      <td><code data-i18n="t_set_param">mode</code> <span data-i18n="t_set_param2">(required): one of the 12 modes below</span></td>
     </tr>
     <tr>
       <td><code>start_daemon</code> <span class="tag tag-tool">tool</span></td>
@@ -235,6 +238,21 @@ Skydimo LED Strip ✨
       <td><code>error</code></td>
       <td><span class="dot dot-doublepulse"></span> <span data-i18n="m_err_e">Red double pulse</span></td>
       <td data-i18n="m_err_d">Error / command failed</td>
+    </tr>
+    <tr>
+      <td><code>planning</code></td>
+      <td><span class="dot dot-purple"></span> <span data-i18n="m_plan_e">Purple slow breathing</span></td>
+      <td data-i18n="m_plan_d">Architecture planning / design</td>
+    </tr>
+    <tr>
+      <td><code>git_push</code></td>
+      <td><span class="dot dot-yellow"></span> <span data-i18n="m_push_e">Yellow flashing</span></td>
+      <td data-i18n="m_push_d">Pushing code to remote</td>
+    </tr>
+    <tr>
+      <td><code>git_merge</code></td>
+      <td><span class="dot dot-orange"></span> <span data-i18n="m_merge_e">Orange pulsing</span></td>
+      <td data-i18n="m_merge_d">Merging branches / resolving conflicts</td>
     </tr>
     <tr>
       <td><code>off</code></td>
@@ -424,7 +442,7 @@ const langData = {
   t_col3: { en: "Parameters", zh: "参数" },
   t_set_desc: { en: "Change the LED strip to a visual mode", zh: "将灯带切换到指定的视觉效果模式" },
   t_set_param: { en: "mode", zh: "mode" },
-  t_set_param2: { en: "(required): one of the 9 modes below", zh: "（必填）：以下 9 种模式之一" },
+  t_set_param2: { en: "(required): one of the 12 modes below", zh: "（必填）：以下 12 种模式之一" },
   t_start_desc: { en: "Start the background COM4 daemon", zh: "启动后台 COM4 守护进程" },
   t_start_param: { en: "mode", zh: "mode" },
   t_start_param2: { en: "(optional, default ", zh: "（可选，默认 " },
@@ -452,6 +470,12 @@ const langData = {
   m_err_d: { en: "Error / command failed", zh: "错误/命令失败" },
   m_off_e: { en: "All off", zh: "全部关闭" },
   m_off_d: { en: "Turn off the lights", zh: "关闭灯光" },
+  m_plan_e: { en: "Purple slow breathing", zh: "紫色慢呼吸" },
+  m_plan_d: { en: "Architecture planning / design", zh: "架构规划 / 设计方案" },
+  m_push_e: { en: "Yellow flashing", zh: "黄色闪烁" },
+  m_push_d: { en: "Pushing code to remote", zh: "推送代码到远端" },
+  m_merge_e: { en: "Orange pulsing", zh: "橙色脉冲" },
+  m_merge_d: { en: "Merging branches / resolving conflicts", zh: "合并分支 / 解决冲突" },
   res_h: { en: "Available MCP Resources", zh: "可用的 MCP 资源" },
   r_col2: { en: "Content", zh: "内容" },
   r_stat: { en: "Plain-text status: daemon running?, current LED state", zh: "纯文本状态：守护进程是否运行、当前 LED 状态" },

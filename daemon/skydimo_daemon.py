@@ -103,6 +103,20 @@ class SkydimoAdalightDaemon:
             elif 0.38 <= cycle < 0.63:
                 brightness = max(brightness, math.sin((cycle - 0.38) / 0.25 * math.pi))
             led_data = [int(255 * brightness), 0, 0] * cfg.NUM_LEDS
+
+        elif self.current_state == 'planning':
+            brightness = 0.3 + 0.7 * (0.5 + 0.5 * math.sin(t * 1.5))
+            led_data = [int(120 * brightness), 0, int(200 * brightness)] * cfg.NUM_LEDS
+
+        elif self.current_state == 'git_push':
+            on = (int(t * 2) % 2 == 0)
+            r, g, b = (255, 200, 0) if on else (40, 30, 0)
+            led_data = [r, g, b] * cfg.NUM_LEDS
+
+        elif self.current_state == 'git_merge':
+            pulse = max(0, math.sin(t * 6.0))
+            brightness = 0.15 + 0.85 * pulse
+            led_data = [int(255 * brightness), int(120 * brightness), 0] * cfg.NUM_LEDS
         else:
             led_data = [0, 0, 0] * cfg.NUM_LEDS
 
